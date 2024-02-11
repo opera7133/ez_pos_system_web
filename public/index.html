@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EZ POS SYSTEM</title>
+
+    <!-- update the version number as needed -->
+    <script defer src="/__/firebase/10.8.0/firebase-app-compat.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/10.8.0/firebase-firestore-compat.js"></script>
+    <!--
+      initialize the SDK after all desired features are loaded, set useEmulator to false
+      to avoid connecting the SDK to running emulators.
+    -->
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div class="px-8 max-w-7xl mx-auto py-20 flex flex-col justify-between h-screen" id="main">
+      <div>
+        <h2 class="text-6xl font-medium">合計<span id="amount">0</span>円</h2>
+        <p class="py-4 text-3xl">商品点数：<span id="quantity">0</span>点</p>
+        <div>
+          <template id="item">
+            <div class="flex justify-between">
+              <p class="py-2 text-3xl"><span id="item-name"></span>　<span id="item-quantity"></span></p>
+              <p class="py-2 text-3xl"><span id="item-amount"></span>円</p>
+            </div>
+          </template>
+          <div id="items" class="py-8 flex flex-col"></div>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-3xl font-medium py-2">不足　　<span id="minus">0</span>円</h3>
+        <h3 class="text-5xl font-medium py-2">お預り　<span id="deposit">0</span>円</h3>
+        <h3 class="text-5xl font-medium py-2">お釣り　<span id="change">0</span>円</h3>
+      </div>
+    </div>
+    <div  class="px-8 max-w-7xl mx-auto py-20 flex flex-col justify-center items-center h-screen" id="complete" style="display:none">
+      <div class="w-40 stroke-lime-500">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M16 3.93552C14.795 3.33671 13.4368 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21C16.9706 21 21 16.9706 21 12C21 11.662 20.9814 11.3283 20.9451 11M21 5L12 14L9 11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+      </div>
+      <h2 class="text-6xl font-medium">お会計完了</h2>
+      <p class="py-4 text-3xl">ありがとうございました</p>
+    </div>
+
+    <script>
+      const getUrlQuery = () => {
+        const query = window.location.search.substring(1);
+        const vars = query.split('&');
+        const res = {};
+        for (let i = 0; i < vars.length; i++) {
+          const pair = vars[i].split('=');
+          res[pair[0]] = decodeURIComponent(pair[1]);
+        }
+        return res;
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        const mainEl = document.querySelector('#main');
+        const completeEl = document.querySelector('#complete');
+        // check /CURRENT_ORDER
+        const db = firebase.firestore();
+        const query = getUrlQuery();
+        db.collection('CURRENT_ORDER').onSnapshot((querySnapshot) => {
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (query.deviceId != undefined && data.deviceId != query.deviceId) return;
+            const amountEl = mainEl.querySelector('#amount');
+            const quantityEl = mainEl.querySelector('#quantity');
+            const itemEl = mainEl.querySelector('#item');
+            const depositEl = mainEl.querySelector('#deposit');
+            const changeEl = mainEl.querySelector('#change');
+            if (data.deposit == undefined) data.deposit = 0;
+            if (data.items.length > 0) {
+              data.amount = data.items.map(item => Number(item.price) * Number(item.quantity)).reduce((a, b) => Number(a) + Number(b));
+              data.quantity = data.items.map(item => item.quantity).reduce((a, b) => Number(a) + Number(b));
+            } else {
+              data.amount = 0;
+              data.quantity = 0;
+            }
+            if (data.type === undefined) {
+              mainEl.style.display = "flex";
+              completeEl.style.display = "none";
+            } else {
+              mainEl.style.display = "none";
+              completeEl.style.display = "flex";
+            }
+            amountEl.textContent = data.amount;
+            quantityEl.textContent = data.quantity;
+            depositEl.textContent = data.deposit;
+            data.change = data.deposit - data.amount;
+            if (data.change < 0) {
+              mainEl.querySelector('#minus').textContent = -data.change;
+              mainEl.querySelector('#change').textContent = 0;
+            } else {
+              mainEl.querySelector('#minus').textContent = 0;
+              mainEl.querySelector('#change').textContent = data.change;
+            }
+            mainEl.querySelector('#items').innerHTML = "";
+            if (data.items.length == 0) return;
+            data.items.forEach(item => {
+              const clone = itemEl.content.cloneNode(true);
+              const nameEl = clone.querySelector('#item-name');
+              const quantityEl = clone.querySelector('#item-quantity');
+              const amountEl = clone.querySelector('#item-amount');
+              nameEl.textContent = item.name;
+              quantityEl.textContent = "x" + item.quantity;
+              amountEl.textContent = Number(item.price) * Number(item.quantity);
+              mainEl.querySelector('#items').appendChild(clone);
+            });
+          });
+        })
+
+        try {
+          let app = firebase.app();
+          let features = [
+            'firestore',
+          ].filter(feature => typeof app[feature] === 'function');
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    </script>
+  </body>
+</html>
