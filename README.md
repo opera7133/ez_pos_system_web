@@ -19,3 +19,7 @@ firebase init
 ```shell
 firebase deploy --only hosting
 ```
+
+3. queryを設定するなどする
+
+httpx://...web.app/?color=black&deviceId=xxxxxxxx

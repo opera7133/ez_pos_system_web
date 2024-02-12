@@ -17,7 +17,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body>
-    <div class="px-8 max-w-7xl mx-auto py-20 flex flex-col justify-between h-screen" id="main">
+    <div class="px-8 max-w-7xl mx-auto py-16 flex flex-col justify-between h-screen" id="main">
       <div>
         <h2 class="text-6xl font-medium">合計<span id="amount">0</span>円</h2>
         <p class="py-4 text-3xl">商品点数：<span id="quantity">0</span>点</p>
@@ -63,6 +63,13 @@
         // check /CURRENT_ORDER
         const db = firebase.firestore();
         const query = getUrlQuery();
+        if (query.color == "black") {
+          document.body.style.backgroundColor = "#000";
+          document.body.style.color = "#fff";
+        } else if (query.color == "blue") {
+          document.body.style.backgroundColor = "#0ea5e9";
+          document.body.style.color = "#fff";
+        }
         db.collection('CURRENT_ORDER').onSnapshot((querySnapshot) => {
           querySnapshot.forEach((doc) => {
             const data = doc.data();
